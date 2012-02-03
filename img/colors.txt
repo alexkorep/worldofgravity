@@ -1,0 +1,16 @@
+base 51D23C green
+D2713C - brown
+3C9CD2 - blue
+BD3CD2 purple
+
+Base: C939FC
+C939FC purple
+38CDFC blue
+FC6738 red
+6BFC38 green	
+
+Base: 
+72480B brown
+710B68 purple
+0B7114 green
+0B3471 blue
