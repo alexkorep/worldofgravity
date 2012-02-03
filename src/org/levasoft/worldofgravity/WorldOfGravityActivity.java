@@ -15,6 +15,7 @@ import org.anddev.andengine.engine.handler.IUpdateHandler;
 import org.anddev.andengine.engine.options.EngineOptions;
 import org.anddev.andengine.engine.options.EngineOptions.ScreenOrientation;
 import org.anddev.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
+import org.anddev.andengine.entity.Entity;
 import org.anddev.andengine.entity.primitive.Rectangle;
 import org.anddev.andengine.entity.scene.Scene;
 import org.anddev.andengine.entity.scene.Scene.IOnSceneTouchListener;
@@ -73,6 +74,8 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 	private static final float WALL_COLOR_RED = 0;
 	private static final float WALL_COLOR_GREEN = 0;
 	
+	static final int ACTIVITY_RESULT_NEXT_LEVEL = 1;
+	
 	
 	
 	// ===========================================================
@@ -92,7 +95,7 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 	private TextureRegion m_ballTextureRegion = null;
 	private Sprite m_ballSprite = null;
 	private Sprite m_ballLightSprite = null;
-	private Body m_ballBody = null;
+	Body m_ballBody = null;
 	private Vector<PhisObject> m_magnets = new Vector<PhisObject>();
 
 
@@ -120,12 +123,14 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 	private TextureRegion m_exitBoxTextureRegion;
 	private PhisObject m_exitBox;
 	private Vector2 m_gravityForce = null;
-	private TextureRegion m_menuTextureRegion;
-	private TextureRegion m_restartTextureRegion;
+	TextureRegion m_menuTextureRegion;
+	TextureRegion m_restartTextureRegion;
 	private float m_initialBoxX = 0;
 	private float m_initialBoxY = 0;
 	private TextureRegion m_ballLightTextureRegion;
 	private TextureRegion m_starTextureRegion;
+	TextureRegion m_completeDialogTextureRegion;
+	TextureRegion m_nextButtonTextureRegion;
 
 	// ===========================================================
 	// Constructors
@@ -149,7 +154,7 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 	@Override
 	public void onLoadResources() {
 		/* Textures. */
-		m_bitmapTextureAtlas = new BitmapTextureAtlas(1024, 1024, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		m_bitmapTextureAtlas = new BitmapTextureAtlas(1024, 2048, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
 		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
 
 		/* TextureRegions. */
@@ -163,6 +168,8 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 		m_restartTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.m_bitmapTextureAtlas, this, "button_restart.png", 0, 740); // 80x80
 		m_ballLightTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.m_bitmapTextureAtlas, this, "ball_light.png", 0, 840); // 40x40 max
 		m_starTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.m_bitmapTextureAtlas, this, "star.png", 0, 880); // 40x40
+		m_completeDialogTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.m_bitmapTextureAtlas, this, "dialog.png", 0, 920); // 720x480
+		m_nextButtonTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.m_bitmapTextureAtlas, this, "button_next.png", 0, 1400); // 40x40
 		
 		this.mEngine.getTextureManager().loadTexture(this.m_bitmapTextureAtlas);
 	}
@@ -220,6 +227,7 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 		};
 		m_scene.registerUpdateHandler(updateHandler);
 
+		final WorldOfGravityActivity that = this;
 		m_physicsWorld.setContactListener(new ContactListener() {
 			@Override
 			public void beginContact(final Contact pContact) {
@@ -233,7 +241,8 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 						pContact.getFixtureB().getBody() == m_exitBox.getBody()) {
 					//Toast.makeText(that, "Level complete!", Toast.LENGTH_LONG).show();
 					// we are succeed, exit activity
-					finish();
+					LevelCompleteDialog dialog = new LevelCompleteDialog(that);
+					dialog.showDialog();
 				} 
 				
 			}
@@ -256,7 +265,7 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 			}
 		});
 		
-		Sprite menuSprite = new Sprite(20, 20, m_menuTextureRegion) {
+		Sprite menuSprite = new Sprite(5, 5, m_menuTextureRegion) {
 			@Override
 			public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
 				if (pSceneTouchEvent.isActionDown()) {
@@ -271,15 +280,13 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 		menuSprite.setAlpha(0.8f);
 		m_scene.attachChild(menuSprite);
 
-		Sprite restartSprite = new Sprite(620, 20, m_restartTextureRegion) {
+		Sprite restartSprite = new Sprite(635, 5, m_restartTextureRegion) {
 			@Override
 			public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
 				if (pSceneTouchEvent.isActionDown()) {
 					// restart level
-					m_ballBody.setTransform(m_initialBoxX/PIXEL_TO_METER_RATIO_DEFAULT, 
-							m_initialBoxY/PIXEL_TO_METER_RATIO_DEFAULT, 0);
-					m_ballBody.setLinearVelocity(0, 0);
-					return  true;
+					restartLevel();
+					return true;
 				}
 				return false;
 			}
@@ -291,6 +298,14 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 		return m_scene;
 	}
 
+
+	protected void restartLevel() {
+		m_ballBody.setTransform(m_initialBoxX/PIXEL_TO_METER_RATIO_DEFAULT, 
+				m_initialBoxY/PIXEL_TO_METER_RATIO_DEFAULT, 0);
+		m_ballBody.setLinearVelocity(0, 0);
+		
+		// todo restore stars
+	}
 
 	private void loadLevel() {
 		Bundle bun = getIntent().getExtras();
@@ -443,6 +458,14 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 		m_ballLightSprite.setPosition(m_ballSprite);
 	}
 
+
+	protected void nextLevel() {
+		finishActivity(ACTIVITY_RESULT_NEXT_LEVEL);
+	}
+
+	public Scene getScene() {
+		return m_scene;
+	}
 
 	// ===========================================================
 	// Inner and Anonymous Classes
