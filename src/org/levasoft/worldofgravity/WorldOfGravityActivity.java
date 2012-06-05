@@ -67,8 +67,6 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 	private static final float GRAVITY_INITIAL_FORCE_RATIO = 4f;
 	private static final float GRAVITY_TOUCH_FORCE_RATIO = 20f;
 
-	private static final String LEVEL_PATH = "/Android/data/org.levasoft.worldofgravity";
-	
 	// Wall color
 	private static final float WALL_COLOR_BLUE = 0;
 	private static final float WALL_COLOR_RED = 0;
@@ -545,6 +543,12 @@ public class WorldOfGravityActivity extends BaseGameActivity implements IOnScene
 			Sprite magnet = m_magnets.get(i).getSprite();
 			magnet.setAlpha(m_magnetAlpha);
 		}
+	}
+
+	@Override
+	public void onLoadComplete() {
+		// Do nothing
+		
 	}
 	
 
